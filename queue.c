@@ -2,6 +2,28 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+
+int is_empty(queue_t **queue);
+
+int queue_size (queue_t *queue)
+{
+    if(!queue)
+    {
+        return 0;
+    }
+
+    queue_t *queue_aux = queue;
+    int counter = 1;
+    while (queue_aux->next != queue)
+    {
+        counter++;
+        queue_aux = queue_aux->next;
+    }
+    return counter;
+    
+}
+
+
 int queue_append (queue_t **queue, queue_t *elem)
 {
     if (!queue) //verify queue existence
@@ -22,18 +44,22 @@ int queue_append (queue_t **queue, queue_t *elem)
         return -1;
     }
 
-    if(is_empty(queue)) //caso seja o primeiro elemento da fila
+    if(is_empty(queue)) //if this is the first element
     {
-        queue = elem;
+        *queue = elem;
         elem->next = elem;
         elem->prev = elem;
     }
 
-    else //caso haja pelo menos um elemento
+    else //if there is at least one element
     {
-        elem->next = (*queue);
-        elem->prev = (*queue)->prev;
+        elem->next = (*queue); //points to the first element
+        elem->prev = (*queue)->prev; //points to the preview last
+        (*queue)->prev->next = elem;//previews last now points to element
+        (*queue)->prev = elem;//element is now the last one
     }
+
+
 
 }
 

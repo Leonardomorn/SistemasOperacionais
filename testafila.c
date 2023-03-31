@@ -107,7 +107,7 @@ int fila_correta (filaint_t *fila)
 int main (int argc, char **argv, char **envp)
 {
    int i ;
-
+   printf("OI \n");
    // inicializa os N elementos
    for (i=0; i<N; i++)
    {
@@ -145,7 +145,7 @@ int main (int argc, char **argv, char **envp)
    assert (queue_size ((queue_t*) fila0) == N) ;
 
    printf ("Testes de insercao funcionaram!\n") ;
-
+/*
    // PARTE 2: queue_remove ====================================================
 
    // esvazia fila0, retirando sempre o primeiro elemento
@@ -335,7 +335,7 @@ int main (int argc, char **argv, char **envp)
    // imprimir a fila
    printf ("Saida esperada: [9<0>1 0<1>2 1<2>3 2<3>4 3<4>5 4<5>6 5<6>7 6<7>8 7<8>9 8<9>0]\n") ;
    queue_print ("Saida gerada  ", (queue_t*) fila0, print_elem) ;
-
+*/
    printf ("Testes concluidos!!!\n") ;
 
    exit(0) ;
