@@ -58,9 +58,72 @@ int queue_append (queue_t **queue, queue_t *elem)
         (*queue)->prev->next = elem;//previews last now points to element
         (*queue)->prev = elem;//element is now the last one
     }
+    return 0;
+}
 
 
+// Remove o elemento indicado da fila, sem o destruir.
+// Condicoes a verificar, gerando msgs de erro:
+// - a fila deve existir
+// - a fila nao deve estar vazia
+// - o elemento deve existir
+// - o elemento deve pertencer a fila indicada
+// Retorno: 0 se sucesso, <0 se ocorreu algum erro
+int queue_remove (queue_t **queue, queue_t *elem)
+{
+    if (!queue) //verify queue existence
+    {
+        fprintf(stderr, "queue does not exist");
+        return -1;
+    }
 
+    if(is_empty(queue)) //verify if queue is empty
+    {
+        fprintf(stderr, "queue is empty");
+        return -1;
+    }
+
+    if (!elem) //verify elem existence
+    {
+        fprintf(stderr, "element does not exist");
+        return -1;
+    }
+
+    if(!(elem->next || elem->prev)) //verify elem isolation
+    {
+        fprintf(stderr, "element is isolated");
+        return -1;
+    }
+
+    queue_t *queue_aux = (*queue);
+
+    if(elem == *(queue) && queue_size(*queue) == 1) //removing the last element
+    {
+        (*queue)->next = NULL;
+        (*queue)->prev = NULL;
+        (*queue) = NULL;
+        queue = NULL;
+        return 0;
+    }
+     do
+    {
+        if (queue_aux == elem)
+        {
+            elem->next->prev = elem->prev;
+            elem->prev->next = elem->next;
+            elem->next = NULL;
+            elem->prev = NULL;
+            elem = NULL;
+            return 0;
+        }
+        queue_aux = queue_aux->next;
+    }
+    while (queue_aux != (*queue)); //wandering in all queue to search for the element
+   
+
+    //if it's not on the queue, return error
+    fprintf(stderr, "element is out of queue");
+    return -1;
 }
 
 /**
