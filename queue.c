@@ -109,11 +109,13 @@ int queue_remove (queue_t **queue, queue_t *elem)
     {
         if (queue_aux == elem)
         {
+
             elem->next->prev = elem->prev;
             elem->prev->next = elem->next;
-            elem->next = NULL;
-            elem->prev = NULL;
-            elem = NULL;
+            if(elem == (*queue))
+            {
+                (*queue) = (*queue)->next;
+            }            
             return 0;
         }
         queue_aux = queue_aux->next;
@@ -122,7 +124,7 @@ int queue_remove (queue_t **queue, queue_t *elem)
    
 
     //if it's not on the queue, return error
-    fprintf(stderr, "element is out of queue");
+    fprintf(stderr, "element out of queue");
     return -1;
 }
 

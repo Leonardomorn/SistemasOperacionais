@@ -107,7 +107,6 @@ int fila_correta (filaint_t *fila)
 int main (int argc, char **argv, char **envp)
 {
    int i ;
-   printf("OI \n");
    // inicializa os N elementos
    for (i=0; i<N; i++)
    {
@@ -155,6 +154,7 @@ int main (int argc, char **argv, char **envp)
    {
       aux = fila0 ;
       queue_remove ((queue_t**) &fila0, (queue_t*) aux) ;
+      printf("removi %i elementos \n", i);
       assert (fila_correta (fila0)) ;  // estrutura continua correta
       assert (aux->id == i) ;            // testa ordem do elemento removido
       assert (aux->prev == NULL) ;       // testa elemento removido
