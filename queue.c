@@ -61,14 +61,13 @@ int queue_append (queue_t **queue, queue_t *elem)
     return 0;
 }
 
-
-// Remove o elemento indicado da fila, sem o destruir.
-// Condicoes a verificar, gerando msgs de erro:
-// - a fila deve existir
-// - a fila nao deve estar vazia
-// - o elemento deve existir
-// - o elemento deve pertencer a fila indicada
-// Retorno: 0 se sucesso, <0 se ocorreu algum erro
+/**
+ * @brief Remove the requested element on the queue
+ * 
+ * @param queue to be reduzed
+ * @param elem element to be removed
+ * @return 0 in success, -1 otherwise
+ */
 int queue_remove (queue_t **queue, queue_t *elem)
 {
     if (!queue) //verify queue existence
@@ -95,27 +94,32 @@ int queue_remove (queue_t **queue, queue_t *elem)
         return -1;
     }
 
-    queue_t *queue_aux = (*queue);
 
     if(elem == *(queue) && queue_size(*queue) == 1) //removing the last element
     {
         (*queue)->next = NULL;
         (*queue)->prev = NULL;
         (*queue) = NULL;
-        queue = NULL;
         return 0;
     }
-     do
+
+    queue_t *queue_aux = (*queue);
+    do
     {
         if (queue_aux == elem)
         {
 
             elem->next->prev = elem->prev;
             elem->prev->next = elem->next;
-            if(elem == (*queue))
+
+            if(elem == (*queue)) //if is the first element of the queue
             {
                 (*queue) = (*queue)->next;
-            }            
+            }
+
+            //isolate element
+            elem->next = NULL;
+            elem->prev = NULL;            
             return 0;
         }
         queue_aux = queue_aux->next;
