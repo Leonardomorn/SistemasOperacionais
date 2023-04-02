@@ -28,19 +28,19 @@ int queue_append (queue_t **queue, queue_t *elem)
 {
     if (!queue) //verify queue existence
     {
-        fprintf(stderr, "queue does not exist");
+        fprintf(stderr, "queue does not exist\n");
         return -1;
     }
 
     if (!elem) //verify elem existence
     {
-        fprintf(stderr, "element does not exist");
+        fprintf(stderr, "element does not exist\n");
         return -1;
     }
 
     if(elem->next || elem->prev) //verify elem isolation
     {
-        fprintf(stderr, "element is not isolated");
+        fprintf(stderr, "element is not isolated\n");
         return -1;
     }
 
@@ -72,25 +72,25 @@ int queue_remove (queue_t **queue, queue_t *elem)
 {
     if (!queue) //verify queue existence
     {
-        fprintf(stderr, "queue does not exist");
+        fprintf(stderr, "queue does not exist\n");
         return -1;
     }
 
     if(is_empty(queue)) //verify if queue is empty
     {
-        fprintf(stderr, "queue is empty");
+        fprintf(stderr, "queue is empty\n");
         return -1;
     }
 
     if (!elem) //verify elem existence
     {
-        fprintf(stderr, "element does not exist");
+        fprintf(stderr, "element does not exist\n");
         return -1;
     }
 
     if(!(elem->next || elem->prev)) //verify elem isolation
     {
-        fprintf(stderr, "element is isolated");
+        fprintf(stderr, "element is isolated\n");
         return -1;
     }
 
@@ -128,7 +128,7 @@ int queue_remove (queue_t **queue, queue_t *elem)
    
 
     //if it's not on the queue, return error
-    fprintf(stderr, "element out of queue");
+    fprintf(stderr, "element out of queue\n");
     return -1;
 }
 
@@ -143,4 +143,31 @@ int is_empty(queue_t **queue)
     if(*queue)
         return 0;
     return 1;
+}
+
+void queue_print (char *name, queue_t *queue, void print_elem (void*) )
+{
+    printf("%s :", name); 
+    if(!queue)
+    {
+        printf("[]\n");
+        return;
+    }
+
+    queue_t *queue_aux = queue;
+
+
+    printf("[");
+    do
+    {
+        print_elem(queue_aux);
+        printf(" ");
+        queue_aux = queue_aux->next;
+    } while (queue_aux->next != queue);
+
+    print_elem(queue_aux);
+        
+    printf("]\n");
+
+
 }
