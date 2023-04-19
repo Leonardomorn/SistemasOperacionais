@@ -3,9 +3,10 @@
 #include <stdlib.h>
 
 #define STACKSIZE 64*1024	/* tamanho de pilha das threads */
+#define DEBUG 1
 
-ucontext_t contextMain_global ;
 task_t *currentTask_global;
+task_t mainTask_global;
 int idCounter_global;
 
 void ppos_init ()
@@ -14,31 +15,10 @@ void ppos_init ()
     setvbuf (stdout, 0, _IONBF, 0);
     idCounter_global = 0;
 
-    char *stack ;
     #ifdef DEBUG
-    printf ("criando contexto principal\n") ;
+    printf ("Settando current task em main\n") ;
     #endif
-    #ifdef DEBUG
-    printf ("obtendo o contexto principal\n") ;
-    #endif
-    getcontext (&(contextMain_global)) ;
-
-    stack = malloc (STACKSIZE) ;
-    if (stack)
-    {
-        #ifdef DEBUG
-        printf ("determinando os descritores do contexto principal\n") ;
-        #endif
-        contextMain_global.uc_stack.ss_sp = stack;
-        contextMain_global.uc_stack.ss_size = STACKSIZE;
-        contextMain_global.uc_stack.ss_flags = 0;
-        contextMain_global.uc_link = 0;
-   }
-   else
-   {
-      perror ("Erro na criação da pilha: ") ;
-      exit (1) ;
-   }
+    currentTask_global = &mainTask_global;
 
 }
 
@@ -47,7 +27,6 @@ int task_init (task_t *task,			// descritor da nova tarefa
                void  (*start_func)(void *),	// funcao corpo da tarefa
                void   *arg) 			// argumentos para a tarefa
 {
-
     char *stack ;
     #ifdef DEBUG
     printf ("criando um contexto\n") ;
@@ -57,6 +36,7 @@ int task_init (task_t *task,			// descritor da nova tarefa
     #endif
     getcontext (&(task->context)) ;
 
+    //alocando a pilha
     stack = malloc (STACKSIZE) ;
     if (stack)
     {
@@ -77,7 +57,8 @@ int task_init (task_t *task,			// descritor da nova tarefa
     #ifdef DEBUG
     printf ("modificando os valores do contexto\n") ;
     #endif
-    makecontext (&(task->context), (void*)(*start_func), arg) ;
+    makecontext (&(task->context), (void*)(start_func),1, arg) ;
+
 
     idCounter_global++;
     #ifdef DEBUG
@@ -97,8 +78,31 @@ int task_id ()
     return currentTask_global->id;
 }
 
-// Termina a tarefa corrente com um valor de status de encerramento
+// Termina a tarefa corrente com um valor de status de encerramento e retorna para a main
 void task_exit (int exit_code) 
 {
-    
+    if(currentTask_global == &mainTask_global)
+    {
+        perror("task exit in main");
+        exit(1);
+    }
+
+    setcontext(&(mainTask_global.context));
+}
+
+// alterna a execução para a tarefa indicada
+int task_switch (task_t *task)
+{
+    #ifdef DEBUG
+    printf ("solicitando troca de contexto\n") ;
+    #endif
+    if (task)
+    {
+    task_t *aux = currentTask_global;
+    currentTask_global = task;
+
+    swapcontext(&(aux->context), &(task->context));
+    return 0;
+    }
+    return -1;
 }
