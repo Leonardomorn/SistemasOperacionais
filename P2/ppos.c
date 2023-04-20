@@ -3,7 +3,6 @@
 #include <stdlib.h>
 
 #define STACKSIZE 64*1024	/* tamanho de pilha das threads */
-#define DEBUG 1
 
 task_t *currentTask_global;
 task_t mainTask_global;
