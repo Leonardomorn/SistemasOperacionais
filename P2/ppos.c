@@ -1,7 +1,7 @@
 #include "ppos.h"
 #include <stdio.h>
 #include <stdlib.h>
-
+#define DEBUG 1
 #define STACKSIZE 64*1024	/* tamanho de pilha das threads */
 
 task_t *currentTask_global;
@@ -20,6 +20,7 @@ void ppos_init ()
     currentTask_global = &mainTask_global;
 
 }
+
 
 // Inicializa uma nova tarefa. Retorna um ID> 0 ou erro.
 int task_init (task_t *task,			// descritor da nova tarefa
@@ -55,9 +56,12 @@ int task_init (task_t *task,			// descritor da nova tarefa
 
     #ifdef DEBUG
     printf ("modificando os valores do contexto\n") ;
+    printf("salvando a funcao do ponteiro%p \n", (void*)(start_func));
     #endif
-    makecontext (&(task->context), (void*)(start_func),1, arg) ;
-
+    if(arg)
+        makecontext (&(task->context), (void*)(start_func),1, arg) ;
+    else
+        makecontext (&(task->context), (void*)(start_func),0) ;
 
     idCounter_global++;
     #ifdef DEBUG
@@ -100,7 +104,8 @@ int task_switch (task_t *task)
     task_t *aux = currentTask_global;
     currentTask_global = task;
 
-    swapcontext(&(aux->context), &(task->context));
+
+    swapcontext(&(aux->context), &(currentTask_global->context));
     return 0;
     }
     return -1;
