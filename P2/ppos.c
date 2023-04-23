@@ -1,7 +1,7 @@
 #include "ppos.h"
 #include <stdio.h>
 #include <stdlib.h>
-#define DEBUG 1
+// #define DEBUG 1
 #define STACKSIZE 64*1024	/* tamanho de pilha das threads */
 
 task_t *currentTask_global;
@@ -90,7 +90,7 @@ void task_exit (int exit_code)
         exit(1);
     }
 
-    setcontext(&(mainTask_global.context));
+    task_switch(&mainTask_global);
 }
 
 // alterna a execução para a tarefa indicada

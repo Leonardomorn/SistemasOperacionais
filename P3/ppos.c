@@ -3,6 +3,10 @@
 #include <stdlib.h>
 #include "queue.h"
 #include "dispatcher.h"
+
+
+
+
 // #define DEBUG 1
 #define STACKSIZE 64*1024	/* tamanho de pilha das threads */
 
@@ -10,6 +14,46 @@ task_t *currentTask_global;
 task_t dispatcherTask_global;
 task_t mainTask_global;
 int idCounter_global, userTasks_global;
+
+
+
+
+
+
+
+
+
+//PARTE DA FILA DE TASKS - INICIO
+
+#define QUEUESIZE 31000
+
+// A estrutura "taskqueue_t" será usada com as funções de queue.c usando um
+// casting para o tipo "queue_t". Isso funciona bem, se os campos iniciais
+// de ambas as estruturas forem os mesmos. De acordo com a seção 6.7.2.1 do
+// padrão C99: "Within a structure object, the non-bit-ﬁeld members and the
+// units in which bit-ﬁelds reside have addresses that increase in the order
+// in which they are declared.".
+
+typedef struct readyTaskQueue_t
+{
+   struct readyTaskQueue_t *prev ;  // ptr para usar cast com queue_t
+   struct readyTaskQueue_t *next ;  // ptr para usar cast com queue_t
+   //int id ;
+   // outros campos podem ser acrescidos aqui
+} readyTaskQueue_t ;
+
+readyTaskQueue_t item[QUEUESIZE];
+readyTaskQueue_t *ready_task_queue;
+int ret ;
+
+
+//PARTE DA FILA DE TASKS - FINAL
+
+
+
+
+
+
 
 
 
@@ -23,9 +67,16 @@ void ppos_init ()
     #ifdef DEBUG
     printf ("Settando current task em main\n") ;
     #endif
+    //coloca a main como atual
     currentTask_global = &mainTask_global;
-    idCounter_global++;
+
+    //inicia a tarefa dispatcher
     task_init(&dispatcherTask_global, dispatcher, NULL);
+
+    #ifdef DEBUG
+    printf ("Terminada inicializacao de sistema\n");
+    #endif
+
 
 }
 
@@ -77,9 +128,20 @@ int task_init (task_t *task,			// descritor da nova tarefa
     #endif
     task->id = idCounter_global;
 
+    if(idCounter_global > 1) //0 e 1 sao reservados para main e dispatcher
+    {
+        //adiciona a tarefa para a fila
+        queue_append((queue_t **) &ready_task_queue, (queue_t *) &task);
+        userTasks_global++;
+    }
+
     #ifdef DEBUG
     printf ("criação finalizada\n") ;
     #endif
+
+
+
+
     return task->id; 
 }
 
@@ -98,6 +160,10 @@ void task_exit (int exit_code)
         exit(1);
     }
 
+    if(currentTask_global == &dispatcherTask_global)
+    {
+        exit(1);
+    }
     task_switch(&mainTask_global);
 }
 
@@ -118,3 +184,5 @@ int task_switch (task_t *task)
     }
     return -1;
 }
+
+

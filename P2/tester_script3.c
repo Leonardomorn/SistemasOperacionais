@@ -8,21 +8,19 @@
 #include <stdlib.h>
 #include "ppos.h"
 
-#define MAXTASK 3
+#define MAXTASK 1000
 
 task_t task ;
 
 // corpo das threads
 void BodyTask (void * arg)
 {
-   printf ("Estou na tarefa %5d\n\n\n\n", task_id()) ;
-   printf("Saí da tarefa ");
+   printf ("Estou na tarefa %5d\n", task_id()) ;
    task_exit (0) ;
 }
 
 int main (int argc, char *argv[])
 {
-   printf("A tarefa main %5d tem esse numero\n\n", task_id());
    int i ;
 
    printf ("main: inicio\n");
@@ -34,7 +32,6 @@ int main (int argc, char *argv[])
    {
      task_init (&task, BodyTask, NULL) ;
      task_switch (&task) ;
-     printf("Estou na tarefa %5d que é a main \n", task_id());
    }
 
    printf ("main: fim\n");

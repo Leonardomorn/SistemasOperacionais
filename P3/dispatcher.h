@@ -3,4 +3,4 @@
 #include <stdlib.h>
 #include "queue.h"
 
-void dispatcher (void * arg);
+void dispatcher (queue_t* queue_task, int userTasksQuantity);

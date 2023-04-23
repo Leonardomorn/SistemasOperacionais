@@ -7,6 +7,10 @@
 #ifndef __PPOS_DATA__
 #define __PPOS_DATA__
 
+#define READY      0
+#define TERMINATED 1
+#define SUSPENDED  3
+
 #include <ucontext.h>		// biblioteca POSIX de trocas de contexto
 
 // Estrutura que define um Task Control Block (TCB)
