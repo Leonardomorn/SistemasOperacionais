@@ -9,7 +9,7 @@
 
 #define READY      0
 #define TERMINATED 1
-#define SUSPENDED  3
+#define SUSPENDED  2
 
 #include <ucontext.h>		// biblioteca POSIX de trocas de contexto
 
@@ -49,3 +49,6 @@ typedef struct
 
 #endif
 
+
+void dispatcher ();
+task_t * scheduler ();

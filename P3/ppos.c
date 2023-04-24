@@ -2,12 +2,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "queue.h"
-#include "dispatcher.h"
 
 
 
 
-// #define DEBUG 1
+#define DEBUG 1
 #define STACKSIZE 64*1024	/* tamanho de pilha das threads */
 
 task_t *currentTask_global;
@@ -15,47 +14,11 @@ task_t dispatcherTask_global;
 task_t mainTask_global;
 int idCounter_global, userTasks_global;
 
-
-
-
-
-
-
-
-
 //PARTE DA FILA DE TASKS - INICIO
 
-#define QUEUESIZE 31000
-
-// A estrutura "taskqueue_t" será usada com as funções de queue.c usando um
-// casting para o tipo "queue_t". Isso funciona bem, se os campos iniciais
-// de ambas as estruturas forem os mesmos. De acordo com a seção 6.7.2.1 do
-// padrão C99: "Within a structure object, the non-bit-ﬁeld members and the
-// units in which bit-ﬁelds reside have addresses that increase in the order
-// in which they are declared.".
-
-typedef struct readyTaskQueue_t
-{
-   struct readyTaskQueue_t *prev ;  // ptr para usar cast com queue_t
-   struct readyTaskQueue_t *next ;  // ptr para usar cast com queue_t
-   //int id ;
-   // outros campos podem ser acrescidos aqui
-} readyTaskQueue_t ;
-
-readyTaskQueue_t item[QUEUESIZE];
-readyTaskQueue_t *ready_task_queue;
-int ret ;
-
+task_t * ready_task_queue;
 
 //PARTE DA FILA DE TASKS - FINAL
-
-
-
-
-
-
-
-
 
 void ppos_init ()
 {
@@ -63,6 +26,8 @@ void ppos_init ()
     setvbuf (stdout, 0, _IONBF, 0);
     idCounter_global = 0;
     userTasks_global = 0;
+    ready_task_queue = NULL;
+
 
     #ifdef DEBUG
     printf ("Settando current task em main\n") ;
@@ -71,13 +36,13 @@ void ppos_init ()
     currentTask_global = &mainTask_global;
 
     //inicia a tarefa dispatcher
-    task_init(&dispatcherTask_global, dispatcher, NULL);
-
+    task_init(&dispatcherTask_global, &dispatcher,NULL);
+    
     #ifdef DEBUG
     printf ("Terminada inicializacao de sistema\n");
     #endif
 
-
+    
 }
 
 
@@ -106,6 +71,8 @@ int task_init (task_t *task,			// descritor da nova tarefa
         task->context.uc_stack.ss_size = STACKSIZE;
         task->context.uc_stack.ss_flags = 0;
         task->context.uc_link = 0;
+        task->next = NULL;
+        task->prev = NULL;
    }
    else
    {
@@ -131,14 +98,16 @@ int task_init (task_t *task,			// descritor da nova tarefa
     if(idCounter_global > 1) //0 e 1 sao reservados para main e dispatcher
     {
         //adiciona a tarefa para a fila
-        queue_append((queue_t **) &ready_task_queue, (queue_t *) &task);
+
+        queue_append((queue_t **) &ready_task_queue, (queue_t *) task);
         userTasks_global++;
+        task->status = READY;
     }
 
     #ifdef DEBUG
     printf ("criação finalizada\n") ;
     #endif
-
+    
 
 
 
@@ -154,17 +123,22 @@ int task_id ()
 // Termina a tarefa corrente com um valor de status de encerramento e retorna para a main
 void task_exit (int exit_code) 
 {
+    //não deve dar exit na main
     if(currentTask_global == &mainTask_global)
     {
         perror("task exit in main");
         exit(1);
     }
+    //caso exit na dispatcher, saia do programa
 
     if(currentTask_global == &dispatcherTask_global)
     {
-        exit(1);
+        exit(exit_code);
     }
-    task_switch(&mainTask_global);
+
+    //caso seja uma tarefa normal
+    currentTask_global->status = TERMINATED;
+    task_switch(&dispatcherTask_global);
 }
 
 // alterna a execução para a tarefa indicada
@@ -186,3 +160,60 @@ int task_switch (task_t *task)
 }
 
 
+void dispatcher ()
+{
+    #ifdef DEBUG
+    printf ("Entrando em Despachante\n") ;
+    #endif
+    task_t *taskAux;
+    while(userTasks_global > 0 )
+    {
+        taskAux = scheduler(ready_task_queue);
+        //se houver alguma tarefa pronta
+        if (taskAux)
+        {
+            //transfere o controle para a prox tarefa
+            task_switch(taskAux);
+            switch (taskAux->status)
+            {
+            case READY:
+                
+                break;
+            case TERMINATED://caso terminada, sair da fila
+
+                {
+                    queue_remove((queue_t **) &ready_task_queue, (queue_t *) taskAux);
+                    userTasks_global--;
+                    
+                }
+                break;
+            default:
+                break;
+            }
+        }
+    }
+}
+
+/*
+*@brief retorna a tarefa que deverá ser executada, em caso de fila vazia, retorna nulo
+*@param queue_task : fila de tarefas prontas
+*/
+task_t * scheduler ()
+{
+    if (ready_task_queue == NULL)
+        return NULL;
+    return ready_task_queue->prev;
+}
+
+/****
+ * @brief gira a lista de tarefas prontas e troca o contexto para o dispatcher
+*/
+void task_yield()
+{
+    if(ready_task_queue)
+    {
+    ready_task_queue = (task_t *) ready_task_queue->next;
+    }  
+    task_switch(&dispatcherTask_global);
+
+}
