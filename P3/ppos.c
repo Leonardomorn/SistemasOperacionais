@@ -6,7 +6,7 @@
 
 
 
-#define DEBUG 1
+//#define DEBUG 1
 #define STACKSIZE 64*1024	/* tamanho de pilha das threads */
 
 task_t *currentTask_global;
@@ -123,11 +123,10 @@ int task_id ()
 // Termina a tarefa corrente com um valor de status de encerramento e retorna para a main
 void task_exit (int exit_code) 
 {
-    //não deve dar exit na main
+    //caso esteja na main, vai para o dispatcher
     if(currentTask_global == &mainTask_global)
     {
-        perror("task exit in main");
-        exit(1);
+        task_switch(&dispatcherTask_global);
     }
     //caso exit na dispatcher, saia do programa
 
@@ -202,7 +201,7 @@ task_t * scheduler ()
 {
     if (ready_task_queue == NULL)
         return NULL;
-    return ready_task_queue->prev;
+    return ready_task_queue;
 }
 
 /****
