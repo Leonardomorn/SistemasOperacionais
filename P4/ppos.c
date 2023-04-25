@@ -6,7 +6,7 @@
 
 
 
-//#define DEBUG 1
+// #define DEBUG 1
 #define STACKSIZE 64*1024	/* tamanho de pilha das threads */
 
 task_t *currentTask_global;
@@ -36,7 +36,7 @@ void ppos_init ()
     //coloca a main como atual
     currentTask_global = &mainTask_global;
     queue_append((queue_t **)&ready_task_queue, (queue_t*)&mainTask_global);
-
+    userTasks_global++;
     //inicia a tarefa dispatcher
     task_init(&dispatcherTask_global, &dispatcher,NULL);
     task_setprio(&mainTask_global, 0);
@@ -141,6 +141,7 @@ void task_exit (int exit_code)
     }
 
     //caso seja uma tarefa normal
+    
     currentTask_global->status = TERMINATED;
     task_switch(&dispatcherTask_global);
 }
@@ -149,7 +150,7 @@ void task_exit (int exit_code)
 int task_switch (task_t *task)
 {
     #ifdef DEBUG
-    printf ("solicitando troca de contexto\n") ;
+    printf ("solicitando troca de contexto da tarefa %d para %d\n", currentTask_global->id, task->id) ;
     #endif
     if (task)
     {
@@ -181,7 +182,7 @@ void dispatcher ()
             switch (taskAux->status)
             {
             case READY:
-                
+                restore_dynamic__into_static_prio(taskAux);
                 break;
             case TERMINATED://caso terminada, sair da fila
 
@@ -273,8 +274,7 @@ task_t* first_min()
             min_task = task_aux;
             min = task_aux->priority_dynamic;
         }
-                task_aux = task_aux->next;
-
+        task_aux = task_aux->next;
     }
     
     // printf("A tarefa mínima possui prioridade %d\n", min);
@@ -291,7 +291,13 @@ void raise_priority(task_t* to_be_executed_task)
     for (int i = 0; i < queue_size((queue_t*)ready_task_queue)-1 ; i++)
     {
         task_aux = task_aux->next;
-        task_aux->priority_dynamic--;
+        if(task_aux->priority_dynamic > -20)   //prioridade máxima é -20
+            task_aux->priority_dynamic--;
     }
     
+}
+
+void restore_dynamic__into_static_prio(task_t *taskAux)
+{
+    taskAux->priority_dynamic = taskAux->priority_static;
 }

@@ -56,3 +56,4 @@ void dispatcher ();
 task_t * scheduler ();
 task_t* first_min();
 void raise_priority(task_t* to_be_executed_task);
+void restore_dynamic__into_static_prio(task_t *taskAux);
