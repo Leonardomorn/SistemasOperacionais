@@ -26,6 +26,7 @@ void ppos_init ()
     setvbuf (stdout, 0, _IONBF, 0);
     idCounter_global = 0;
     userTasks_global = 0;
+    mainTask_global.id=0;
     ready_task_queue = NULL;
 
 
@@ -34,16 +35,18 @@ void ppos_init ()
     #endif
     //coloca a main como atual
     currentTask_global = &mainTask_global;
+    queue_append((queue_t **)&ready_task_queue, (queue_t*)&mainTask_global);
 
     //inicia a tarefa dispatcher
     task_init(&dispatcherTask_global, &dispatcher,NULL);
-    
+    task_setprio(&mainTask_global, 0);
     #ifdef DEBUG
     printf ("Terminada inicializacao de sistema\n");
     #endif
 
     
 }
+
 
 
 // Inicializa uma nova tarefa. Retorna um ID> 0 ou erro.
@@ -103,6 +106,8 @@ int task_init (task_t *task,			// descritor da nova tarefa
         userTasks_global++;
         task->status = READY;
     }
+
+    task_setprio(task, 0);
 
     #ifdef DEBUG
     printf ("criação finalizada\n") ;
@@ -193,26 +198,100 @@ void dispatcher ()
     }
 }
 
-/*
+/********
 *@brief retorna a tarefa que deverá ser executada, em caso de fila vazia, retorna nulo
 *@param queue_task : fila de tarefas prontas
+*@return tarefa a ser executada, em caso de fila vazia, retorna nulo
 */
 task_t * scheduler ()
 {
     if (ready_task_queue == NULL)
         return NULL;
-    return ready_task_queue;
+    task_t *to_be_executed_task;
+    //tarefa a ser executada é o primeiro mínimo a partir do segundo valor fila
+    to_be_executed_task = first_min();
+    //faz a fila de tarefas prontas apontar para a tarefa a ser executada
+    //ready_task_queue = to_be_executed_task;
+    //reduz a prioridade das outras tarefas que não serão executadas neste momento
+    raise_priority(to_be_executed_task);
+
+    return to_be_executed_task;
 }
 
 /****
- * @brief gira a lista de tarefas prontas e troca o contexto para o dispatcher
+ * @brief troca o contexto para o dispatcher
 */
 void task_yield()
 {
-    if(ready_task_queue)
-    {
-    ready_task_queue = (task_t *) ready_task_queue->next;
-    }  
+
     task_switch(&dispatcherTask_global);
 
+}
+
+void task_setprio (task_t *task, int prio)
+{
+    #ifdef DEBUG
+    if (task)
+        printf ("Setando prioridade da tarefa %d como %d\n", task->id, prio) ;
+    else
+        printf ("Setando prioridade da tarefa atual %d como %d\n", currentTask_global->id, prio) ;
+    #endif
+    if (task)
+        {
+        task->priority_static = prio;
+        task->priority_dynamic = prio;
+        }
+    else
+    {
+        currentTask_global->priority_static = prio;
+        currentTask_global->priority_dynamic = prio;
+    }
+    
+
+}
+
+int task_getprio (task_t *task)
+{
+    if(task)
+        return task->priority_static;
+    else
+        return currentTask_global->priority_static;
+}
+
+/******
+ * @brief retorna o primeiro mínimo da fila de prontos
+*/
+task_t* first_min()
+{
+    task_t *task_aux = ready_task_queue;
+    task_t *min_task = NULL;
+    int min = 100;
+    for (int i = 0; i < queue_size((queue_t*)ready_task_queue); i++)
+    {
+        if(task_aux->priority_dynamic < min)
+        {
+            min_task = task_aux;
+            min = task_aux->priority_dynamic;
+        }
+                task_aux = task_aux->next;
+
+    }
+    
+    // printf("A tarefa mínima possui prioridade %d\n", min);
+    return min_task;
+}
+
+/******
+ * @brief aumenta a prioridade de todas a prioridade de todas as tarefas, com exeção da primeira. A tarefa mais prioritária é a de menor valor 
+*/
+void raise_priority(task_t* to_be_executed_task)
+{
+    task_t *task_aux = to_be_executed_task;
+
+    for (int i = 0; i < queue_size((queue_t*)ready_task_queue)-1 ; i++)
+    {
+        task_aux = task_aux->next;
+        task_aux->priority_dynamic--;
+    }
+    
 }

@@ -20,6 +20,8 @@ void Body (void * arg)
   for (i=0; i<10; i++)
   {
     printf ("%s: %d\n", (char *) arg, i) ;
+      // printf("prioridade atual %d\n", task_getprio(NULL));
+
     task_yield ();
   }
   printf ("%s: fim\n", (char *) arg) ;

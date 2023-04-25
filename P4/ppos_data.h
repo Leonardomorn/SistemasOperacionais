@@ -20,6 +20,8 @@ typedef struct task_t
   int id ;				// identificador da tarefa
   ucontext_t context ;			// contexto armazenado da tarefa
   short status ;			// pronta, rodando, suspensa, ...
+  short priority_static;
+  short priority_dynamic;     //prioridade da tarefa a ser executada, -20 é prioridade máxima e 20 prioridade mínima
   // ... (outros campos serão adicionados mais tarde)
 } task_t ;
 
@@ -52,3 +54,5 @@ typedef struct
 
 void dispatcher ();
 task_t * scheduler ();
+task_t* first_min();
+void raise_priority(task_t* to_be_executed_task);
