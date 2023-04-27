@@ -188,6 +188,8 @@ void dispatcher ()
 
                 {
                     queue_remove((queue_t **) &ready_task_queue, (queue_t *) taskAux);
+                    if (taskAux != &mainTask_global)
+                        free(taskAux->context.uc_stack.ss_sp);
                     userTasks_global--;
                     
                 }

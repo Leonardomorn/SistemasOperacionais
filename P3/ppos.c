@@ -45,7 +45,6 @@ void ppos_init ()
     
 }
 
-
 // Inicializa uma nova tarefa. Retorna um ID> 0 ou erro.
 int task_init (task_t *task,			// descritor da nova tarefa
                void  (*start_func)(void *),	// funcao corpo da tarefa
@@ -192,10 +191,10 @@ void dispatcher ()
         }
     }
 }
-
-/*
+/********
 *@brief retorna a tarefa que deverá ser executada, em caso de fila vazia, retorna nulo
 *@param queue_task : fila de tarefas prontas
+*@return tarefa a ser executada, em caso de fila vazia, retorna nulo
 */
 task_t * scheduler ()
 {
@@ -203,6 +202,7 @@ task_t * scheduler ()
         return NULL;
     return ready_task_queue;
 }
+
 
 /****
  * @brief gira a lista de tarefas prontas e troca o contexto para o dispatcher
