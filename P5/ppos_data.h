@@ -10,6 +10,8 @@
 #define READY      0
 #define TERMINATED 1
 #define SUSPENDED  2
+#define USER_TASK 10
+#define SYSTEM_TASK 11
 
 #include <ucontext.h>		// biblioteca POSIX de trocas de contexto
 
@@ -22,6 +24,8 @@ typedef struct task_t
   short status ;			// pronta, rodando, suspensa, ...
   short priority_static;
   short priority_dynamic;     //prioridade da tarefa a ser executada, -20 é prioridade máxima e 20 prioridade mínima
+  short type; // tarefas podem ser do tipo sistema (exemplo: dispatcher) ou usuário (exemplo: taferas regulares)
+  short quantum_ticks; // tarefas tem um máximo de ticks a cada quantum antes de serem retiradas por preempção
   // ... (outros campos serão adicionados mais tarde)
 } task_t ;
 
@@ -53,7 +57,16 @@ typedef struct
 
 
 void dispatcher ();
+//define quem é a próxima tarefa a ser executada
 task_t * scheduler ();
+//devolve a tarefa mínima - a de maior prioridade
 task_t* first_min();
+//aumenta a prioridade de uma tarefa
 void raise_priority(task_t* to_be_executed_task);
+//volta a prioridade estática para a tarefa
 void restore_dynamic__into_static_prio(task_t *taskAux);
+//define se a tarefa é tipo sistema ou usuário
+void task_set_type(task_t* task, short type);
+void initialize_handler();
+void initialize_timer();
+void handling (int signum);
