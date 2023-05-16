@@ -335,7 +335,7 @@ void initialize_timer()
 #ifdef DEBUG
     printf("Inicializando o timer\n");
 #endif
-    timer_global.it_value.tv_usec = 500000;       // primeiro disparo em microsegundos
+    timer_global.it_value.tv_usec = 100000;       // primeiro disparo em microsegundos
     timer_global.it_value.tv_sec = 0;        // primeiro disparo em segundos
     timer_global.it_interval.tv_usec = 1000; // disparos subsequentes em microsegundos
     timer_global.it_interval.tv_sec = 0;     // disparos subsequentes em segundos
