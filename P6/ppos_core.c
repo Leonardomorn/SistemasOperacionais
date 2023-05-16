@@ -10,6 +10,7 @@ Professor: Carlos Maziero
 #include <signal.h>
 #include <sys/time.h>
 
+
 // testa sistema operacional
 #if defined(_WIN32) || (!defined(__unix__) && !defined(__unix) && (!defined(__APPLE__) || !defined(__MACH__)))
 #warning Este codigo foi planejado para ambientes UNIX (LInux, *BSD, MacOS). A compilacao e execucao em outros ambientes e responsabilidade do usuario.
@@ -23,25 +24,40 @@ task_t dispatcherTask_global;
 task_t mainTask_global;
 int idCounter_global, userTasks_global;
 task_t *ready_task_queue;
+unsigned int system_time_global;
 
 // estrutura que define um tratador de sinal
 struct sigaction signal_handler_global;
 // estrutura de inicialização do timer
 struct itimerval timer_global;
 
+
+//inicializa propriedades da tarefa main
+void initializeMainTask()
+{
+    mainTask_global.id = 0;
+    mainTask_global.quantum_ticks = 0;
+    mainTask_global.initial_time = systime();
+    mainTask_global.initial_time_processor = systime();
+    mainTask_global.activations = 0;
+    task_setprio(&mainTask_global, 0);
+    task_set_type(&mainTask_global, USER_TASK);
+
+
+}
+
 void ppos_init()
 {
     /* desativa o buffer da saida padrao (stdout), usado pela função printf */
     setvbuf(stdout, 0, _IONBF, 0);
+    system_time_global = 0;
     idCounter_global = 0;
     userTasks_global = 0;
-    mainTask_global.id = 0;
-    mainTask_global.quantum_ticks = 0;
     ready_task_queue = NULL;
-
 #ifdef DEBUG
     printf("Settando current task em main\n");
 #endif
+    initializeMainTask();
     // coloca a main como atual
     currentTask_global = &mainTask_global;
     queue_append((queue_t **)&ready_task_queue, (queue_t *)&mainTask_global);
@@ -50,7 +66,6 @@ void ppos_init()
     task_init(&dispatcherTask_global, &dispatcher, NULL);
     // define dispatcher como tarefa de sistema
     task_set_type(&dispatcherTask_global, SYSTEM_TASK);
-    task_setprio(&mainTask_global, 0);
     initialize_handler();
     initialize_timer();
 
@@ -65,21 +80,21 @@ int task_init(task_t *task,               // descritor da nova tarefa
               void *arg)                  // argumentos para a tarefa
 {
     char *stack;
-#ifdef DEBUG
-    printf("criando um contexto\n");
-#endif
-#ifdef DEBUG
-    printf("obtendo o contexto\n");
-#endif
+    #ifdef DEBUG
+        printf("criando um contexto\n");
+    #endif
+    #ifdef DEBUG
+        printf("obtendo o contexto\n");
+    #endif
     getcontext(&(task->context));
 
     // alocando a pilha
     stack = malloc(STACKSIZE);
     if (stack)
     {
-#ifdef DEBUG
+    #ifdef DEBUG
         printf("determinando os descritores do contexto\n");
-#endif
+    #endif
         task->context.uc_stack.ss_sp = stack;
         task->context.uc_stack.ss_size = STACKSIZE;
         task->context.uc_stack.ss_flags = 0;
@@ -93,19 +108,19 @@ int task_init(task_t *task,               // descritor da nova tarefa
         exit(1);
     }
 
-#ifdef DEBUG
-    printf("modificando os valores do contexto\n");
-    printf("salvando a funcao do ponteiro%p \n", (void *)(start_func));
-#endif
+    #ifdef DEBUG
+        printf("modificando os valores do contexto\n");
+        printf("salvando a funcao do ponteiro%p \n", (void *)(start_func));
+    #endif
     if (arg)
         makecontext(&(task->context), (void *)(start_func), 1, arg);
     else
         makecontext(&(task->context), (void *)(start_func), 0);
 
     idCounter_global++;
-#ifdef DEBUG
-    printf("atribuindo um ID %d\n", idCounter_global);
-#endif
+    #ifdef DEBUG
+        printf("atribuindo um ID %d\n", idCounter_global);
+    #endif
     task->id = idCounter_global;
 
     if (idCounter_global > 1) // 0 e 1 sao reservados para main e dispatcher
@@ -123,9 +138,11 @@ int task_init(task_t *task,               // descritor da nova tarefa
         task_set_type(task, USER_TASK);
 
     task->quantum_ticks = 0;
-#ifdef DEBUG
-    printf("criação finalizada\n");
-#endif
+    task->activations = 0;
+    task->initial_time = systime();
+    #ifdef DEBUG
+        printf("criação finalizada\n");
+    #endif
 
     return task->id;
 }
@@ -168,6 +185,13 @@ int task_switch(task_t *task)
         task_t *aux = currentTask_global;
         currentTask_global = task;
 
+        //acrescenta o tempo de processador da tarefa que estava executando 
+        aux->final_time_processor = systime();
+        aux->processor_time = aux->processor_time + (aux->final_time_processor - aux->initial_time_processor);
+        //setta o tempo inicial do próximo processamento da tarefa e seu número de ativação
+        currentTask_global->initial_time_processor = systime();
+        currentTask_global->activations++;
+        //troca para o contexto da nova tarefa
         swapcontext(&(aux->context), &(currentTask_global->context));
         return 0;
     }
@@ -197,7 +221,14 @@ void dispatcher()
             case TERMINATED: // caso terminada, sair da fila
 
             {
+                //calcula o tempo de execução da tarefa
+                taskAux->final_time = systime();
+                taskAux->execution_time = taskAux->final_time - taskAux->initial_time;
+                //remove a tarefa da fila de prontos
                 queue_remove((queue_t **)&ready_task_queue, (queue_t *)taskAux);
+                //imprime tempos de execução, processador e ativação da tarefa
+                printf("Task %d exit: execution time %d ms, processor time %d ms, %d activations\n", taskAux->id, taskAux->execution_time, taskAux->processor_time, taskAux->activations);
+                //caso a tarefa não seja a main, desalocar ela
                 if (taskAux != &mainTask_global)
                     free(taskAux->context.uc_stack.ss_sp);
                 userTasks_global--;
@@ -208,6 +239,10 @@ void dispatcher()
             }
         }
     }
+    currentTask_global->final_time = systime();
+    currentTask_global->execution_time = currentTask_global->final_time - currentTask_global->initial_time;    
+    printf("Task %d exit: execution time %d ms, processor time %d ms, %d activations\n", currentTask_global->id, currentTask_global->execution_time, currentTask_global->processor_time, currentTask_global->activations);
+
 }
 
 /********
@@ -321,6 +356,8 @@ void handling(int signum)
     printf("Recebi o sinal %d\n", signum);
     #endif
 
+    system_time_global++;
+
     //não há alterações caso seja uma tarefa de sistema
     if (currentTask_global->status == SYSTEM_TASK)
         return;
@@ -369,4 +406,9 @@ void initialize_handler()
 #ifdef DEBUG
     printf("Handler inicializado\n");
 #endif
+}
+
+unsigned int systime()
+{
+    return system_time_global;
 }

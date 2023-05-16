@@ -26,6 +26,14 @@ typedef struct task_t
   short priority_dynamic;     //prioridade da tarefa a ser executada, -20 é prioridade máxima e 20 prioridade mínima
   short type; // tarefas podem ser do tipo sistema (exemplo: dispatcher) ou usuário (exemplo: taferas regulares)
   short quantum_ticks; // tarefas tem um máximo de ticks a cada quantum antes de serem retiradas por preempção
+  unsigned int initial_time;
+  unsigned int final_time;
+  unsigned int execution_time;
+  unsigned int initial_time_processor;
+  unsigned int final_time_processor;
+  unsigned int processor_time;
+  unsigned int activations;
+
   // ... (outros campos serão adicionados mais tarde)
 } task_t ;
 
@@ -70,3 +78,5 @@ void task_set_type(task_t* task, short type);
 void initialize_handler();
 void initialize_timer();
 void handling (int signum);
+unsigned int systime();
+void initializeMainTask();
