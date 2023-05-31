@@ -36,7 +36,7 @@ typedef struct task_t
   unsigned int activations;
   struct task_t *waiting_this_task_queue;
   int exitCode;
-
+  unsigned int wake_up_time; // ao acionar o sleep, a tarefa acordará no tempo wake_up_time
 
   // ... (outros campos serão adicionados mais tarde)
 } task_t ;
@@ -88,3 +88,5 @@ int task_wait(task_t *task);
 void task_resume (task_t *task, task_t **queue);
 void task_suspend (task_t **queue);
 void free_suspended_queue();
+void task_sleep (int t);
+void wake_sleeping_tasks();

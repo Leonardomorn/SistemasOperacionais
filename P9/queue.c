@@ -28,7 +28,7 @@ int queue_append (queue_t **queue, queue_t *elem)
 {
     if (!queue) //verify queue existence
     {
-        fprintf(stderr, "queue does not exist\n");
+        fprintf(stderr, "queue does not exist, can't append\n");
         return -1;
     }
 

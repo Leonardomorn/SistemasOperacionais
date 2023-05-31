@@ -24,12 +24,13 @@ task_t dispatcherTask_global;
 task_t mainTask_global;
 int idCounter_global, userTasks_global;
 task_t *ready_task_queue;
+task_t *sleeping_task_queue;
 unsigned int system_time_global;
 
 
 // estrutura que define um tratador de sinal
 struct sigaction signal_handler_global;
-int pode_preempcao = 1;
+int pode_preempcao = 1; int colocando_dormir = 1; // se qualquer valor desses for 0, não haverá preempção por tempo 
 // estrutura de inicialização do timer
 struct itimerval timer_global;
 
@@ -56,6 +57,7 @@ void ppos_init()
     idCounter_global = 0;
     userTasks_global = 0;
     ready_task_queue = NULL;
+    sleeping_task_queue = NULL;
 #ifdef DEBUG
     printf("Settando current task em main\n");
 #endif
@@ -212,6 +214,7 @@ void dispatcher()
     task_t *taskAux;
     while (userTasks_global > 0)
     {
+        wake_sleeping_tasks(); //acorda tarefas que estão dormindo e já passaram do tempo de dormir
         taskAux = scheduler(ready_task_queue);
         // se houver alguma tarefa pronta
         if (taskAux)
@@ -365,7 +368,7 @@ void handling(int signum)
     system_time_global++;
 
     //não há alterações caso seja uma tarefa de sistema ou se estiver em um processo atômico
-    if (currentTask_global->status == SYSTEM_TASK || pode_preempcao == 0)
+    if (currentTask_global->status == SYSTEM_TASK || pode_preempcao == 0 || colocando_dormir == 0)
         return;
     currentTask_global->quantum_ticks++;
     if (currentTask_global->quantum_ticks > 20)
@@ -419,7 +422,7 @@ unsigned int systime()
     return system_time_global;
 }
 
-
+//======================================Sincronização====================================================//
 /**
  * @brief função que remove a tarefa atual da fila de prontos, suspende a tarefa e a adiciona na queue
  * 
@@ -444,6 +447,7 @@ void task_suspend (task_t **queue)
     currentTask_global->status = SUSPENDED;
     //adiciona a tarefa atual em queue
     queue_append((queue_t **)queue,(queue_t*)currentTask_global);
+    // printf("Po, nao ta indo, task atual %d\n", currentTask_global->id);
     pode_preempcao = 1;
     //retorna ao dispatcher
     task_yield();
@@ -473,7 +477,13 @@ void task_resume (task_t *task, task_t **queue)
     task->status = READY;
 
     //insere a tarefa na fila de tarefas prontas.
+    if(ready_task_queue)
     queue_append((queue_t **) ready_task_queue, (queue_t*)task);
+
+    else
+    {
+        printf("A Fila de prontas sumiu\n");
+    }
 
     pode_preempcao = 1;
 
@@ -498,3 +508,52 @@ void free_suspended_queue()
     }
     
 }
+
+//======================================Sincronização====================================================//
+
+/**
+ * @brief faz a tarefa atual dormir em um tempo especificado e a coloca na fila de tarefas dormindo
+ * 
+ * @param t tempo em milisegundos que a tarefa irá dormir
+ */
+void task_sleep (int t)
+{
+    if (t <= 0)
+        return;
+    
+    pode_preempcao = 0;
+    currentTask_global->wake_up_time = systime() + t;
+    task_suspend(&sleeping_task_queue);
+    pode_preempcao = 1;
+
+    
+
+}
+
+/**
+ * @brief acorda tarefas da fila de tarefas dormindo cujo tempo para dormir já passou
+ * 
+ */
+void wake_sleeping_tasks()
+{
+
+    task_t  *taskAux = sleeping_task_queue;
+    task_t  *pass_through_queue = sleeping_task_queue;
+    for (int i = 0; i < queue_size((queue_t *) sleeping_task_queue); i++)
+    {
+        pass_through_queue = pass_through_queue->next;
+
+        //se já passou da hora da tarefa acordar, acorda a tarefa e retira ela da fila. Subtrai 1 do iterador pois o tamanha da fila mudou
+        if (taskAux->wake_up_time <= systime())
+        {
+            task_resume(taskAux, &sleeping_task_queue);
+            i--;
+        }
+        taskAux = pass_through_queue;
+    }
+    
+
+}
+
+//======================================Tarefas dormindo==================================================//
+
