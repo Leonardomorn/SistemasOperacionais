@@ -188,7 +188,9 @@ int task_switch(task_t *task)
 #ifdef DEBUG
     printf("solicitando troca de contexto da tarefa %d para %d\n", currentTask_global->id, task->id);
 #endif
-    if (task)
+    if (task == NULL)
+        return -1;
+    else
     {
         task_t *aux = currentTask_global;
         currentTask_global = task;
@@ -203,7 +205,6 @@ int task_switch(task_t *task)
         swapcontext(&(aux->context), &(currentTask_global->context));
         return 0;
     }
-    return -1;
 }
 
 void dispatcher()
@@ -212,16 +213,21 @@ void dispatcher()
     printf("Entrando em Despachante\n");
 #endif
     task_t *taskAux;
+    
     while (userTasks_global > 0)
     {
+        colocando_dormir = 0;
         wake_sleeping_tasks(); //acorda tarefas que estão dormindo e já passaram do tempo de dormir
+        colocando_dormir = 1;
         taskAux = scheduler(ready_task_queue);
         // se houver alguma tarefa pronta
-        if (taskAux)
+        if (taskAux != NULL)
         {
             // transfere o controle para a prox tarefa
             taskAux->quantum_ticks = 0;
+            pode_preempcao = 0;
             task_switch(taskAux);
+            pode_preempcao = 1;
             switch (taskAux->status)
             {
             case READY:
@@ -438,16 +444,10 @@ void task_suspend (task_t **queue)
     {
         queue_remove((queue_t **)&ready_task_queue, (queue_t *)taskAux);
     }
-    else
-    {
-        printf("Erro fila inexistente\n");
-        exit(1);
-    }
     //deixa o status da tarefa atual como SUSPENDED
     currentTask_global->status = SUSPENDED;
     //adiciona a tarefa atual em queue
     queue_append((queue_t **)queue,(queue_t*)currentTask_global);
-    // printf("Po, nao ta indo, task atual %d\n", currentTask_global->id);
     pode_preempcao = 1;
     //retorna ao dispatcher
     task_yield();
@@ -464,26 +464,11 @@ void task_resume (task_t *task, task_t **queue)
 {
     pode_preempcao = 0;
     //se a fila queue não for nula, retira a tarefa apontada por task dessa fila
-    if(queue)
-    {
-        queue_remove((queue_t **)queue, (queue_t *)task);
-    }
-    else
-    {
-        printf("Erro fila inexistente\n");
-        exit(1);
-    }
-    //ajusta o status dessa tarefa para “pronta”
+    if(queue == NULL)
+        return;
+    queue_remove((queue_t**)queue, (queue_t*)task);
     task->status = READY;
-
-    //insere a tarefa na fila de tarefas prontas.
-    if(ready_task_queue)
-    queue_append((queue_t **) ready_task_queue, (queue_t*)task);
-
-    else
-    {
-        printf("A Fila de prontas sumiu\n");
-    }
+    queue_append((queue_t**)&ready_task_queue, (queue_t*)task);
 
     pode_preempcao = 1;
 
@@ -491,6 +476,8 @@ void task_resume (task_t *task, task_t **queue)
 
 int task_wait(task_t *task)
 {
+    if(task==NULL || task->status == TERMINATED)
+        return 1;
     task_suspend(&task->waiting_this_task_queue);
     return task->exitCode;
 
@@ -521,10 +508,10 @@ void task_sleep (int t)
     if (t <= 0)
         return;
     
-    pode_preempcao = 0;
+    colocando_dormir = 0;
     currentTask_global->wake_up_time = systime() + t;
     task_suspend(&sleeping_task_queue);
-    pode_preempcao = 1;
+    colocando_dormir = 1;
 
     
 
@@ -536,7 +523,6 @@ void task_sleep (int t)
  */
 void wake_sleeping_tasks()
 {
-
     task_t  *taskAux = sleeping_task_queue;
     task_t  *pass_through_queue = sleeping_task_queue;
     for (int i = 0; i < queue_size((queue_t *) sleeping_task_queue); i++)
@@ -551,7 +537,7 @@ void wake_sleeping_tasks()
         }
         taskAux = pass_through_queue;
     }
-    
+
 
 }
 
